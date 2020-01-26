@@ -100,6 +100,8 @@ public class SettingsPanel extends ProjectSettingsPanelBase {
 		settingsForm.add(new CheckBox("learnEvidence"));
 		settingsForm.add(new CheckBox("suggestLinks"));
 		settingsForm.add(new CheckBox("learnLinks"));
+		settingsForm.add(new CheckBox("fixSpellingEvidence"));
+		settingsForm.add(new CheckBox("fixSpellingLinks"));
 	}
 
 	@Override

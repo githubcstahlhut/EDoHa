@@ -6,3 +6,9 @@ Technische Universität Darmstadt
 -------------------------------------------------------------------------------
 The code of the project is provided under Apache 2.0 license (see LICENSE.TXT).
 The licensing for derivative datasets is specified in the respective folders.
+
+-------------------------------------------------------------------------------
+Contains spell correction code implemented by Peter Kuhar
+
+Copyright 2016 Peter Kuhar.
+Open source code under MIT license: http://www.opensource.org/licenses/mit-license.php

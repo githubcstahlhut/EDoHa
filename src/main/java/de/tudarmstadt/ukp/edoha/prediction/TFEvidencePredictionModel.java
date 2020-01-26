@@ -15,6 +15,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -58,23 +60,22 @@ public class TFEvidencePredictionModel {
 	private User user;
 
 	private Map<String, Integer> token2Index;
+
 	private Session session;
 
 	private int maxLength;
 
 	private String modelPath;
 
-
-
-	public TFEvidencePredictionModel(String modelPath, DocumentService documentService2, SettingsService settingsService,
-			Project project, User user) throws IOException {
+	public TFEvidencePredictionModel(String modelPath, DocumentService documentService2,
+			SettingsService settingsService, Project project, User user) throws IOException {
 		this.documentService = documentService2;
 		this.settingsService = settingsService;
 		this.project = project;
 		this.maxLength = settingsService.readSettings(project).getEvidenceDetectionMaxLength();
 		this.username = user.getUsername();
 		this.user = user;
-		this.modelPath = modelPath+"/"+project.getName();
+		this.modelPath = modelPath + "/" + project.getName();
 		SavedModelBundle bundle = SavedModelBundle.load(String.format("%s/%s", this.modelPath, "evidencedetection"),
 				"serve");
 		session = bundle.session();
@@ -132,7 +133,18 @@ public class TFEvidencePredictionModel {
 				int tokenIndex = token2Index.get("UNKNOWN");
 				if (token2Index.containsKey(currentToken)) {
 					tokenIndex = token2Index.get(currentToken);
+				} else if (settingsService.readSettings(getCurrentProject()).isFixSpellingEvidence()) {
+					List<String> edits = edits1(currentToken);
+					String replacement = "UNKNOWN";
+					for (String edit : edits) {
+						if (token2Index.containsKey(edit)) {
+							replacement = edit;
+						}
+					}
+					LOGGER.info(String.format("Replacing %s with %s", currentToken, replacement));
+					tokenIndex = token2Index.get(replacement);
 				}
+
 				int paddedIndex = (maxLength - maxSentenceLength) + j;
 				sentenceArray[paddedIndex] = tokenIndex;
 			}
@@ -140,6 +152,21 @@ public class TFEvidencePredictionModel {
 		}
 		return data;
 	}
+
+	/**
+	 * Code from https://github.com/unrelatedlabs/SpellingCorrector-Java8.
+	 * Calculates all single edit changes to the word in question
+	 * @param word to calculate all single edit changes
+	 * @return all single edit permutations
+	 */
+	List<String> edits1(final String word) {
+		Stream<String> deletes = IntStream.range(0, word.length()).mapToObj((i) -> word.substring(0, i) + word.substring(i + 1));
+		Stream<String> replaces = IntStream.range(0, word.length()).mapToObj((i) -> i).flatMap((i) -> "abcdefghijklmnopqrstuvwxyz".chars().mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i + 1)));
+		Stream<String> inserts = IntStream.range(0, word.length() + 1).mapToObj((i) -> i).flatMap((i) -> "abcdefghijklmnopqrstuvwxyz".chars().mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i)));
+		Stream<String> transposes = IntStream.range(0, word.length() - 1).mapToObj((i) -> word.substring(0, i) + word.substring(i + 1, i + 2) + word.charAt(i) + word.substring(i + 2));
+		return Stream.of(deletes, replaces, inserts, transposes).flatMap((x) -> x).collect(Collectors.toList());
+	}
+
 
 	@Async
 	public void train(String username, String type, PredictionProgressListener listener, Project project) {
@@ -167,13 +194,14 @@ public class TFEvidencePredictionModel {
 
 		int[] trainLengths = getTrainLengths(trainSentences);
 		float[][] trainLabels = getTrainLabels(jCases, type);
-		
+
 		// Down-sampling of non-evidence
 		List<Integer> positiveIndices = getIndices(trainLabels, 1);
 		List<Integer> negativeIndices = getIndices(trainLabels, 0);
 		if (positiveIndices.size() < negativeIndices.size()) { // down-sampling necessary
 
-			LOGGER.info(String.format("Down-sampling from %s to %s negative samples", negativeIndices.size(), positiveIndices.size()));
+			LOGGER.info(String.format("Down-sampling from %s to %s negative samples", negativeIndices.size(),
+					positiveIndices.size()));
 
 			Random seed = new Random(0);
 			Collections.shuffle(negativeIndices, seed);
@@ -197,7 +225,7 @@ public class TFEvidencePredictionModel {
 				sampledLabels[arrayIndex + 1] = trainLabels[negativeIndex];
 				arrayIndex += 2;
 			}
-			
+
 			trainSentences = sampledSentences;
 			trainLengths = sampledLengths;
 			trainLabels = sampledLabels;
@@ -205,7 +233,8 @@ public class TFEvidencePredictionModel {
 		}
 		int[][] trainData = convertTokensToArray(trainSentences, trainSentences.size());
 
-		try { // pause current thread before actual training to avoid blocking the application for too long
+		try { // pause current thread before actual training to avoid blocking the application
+				// for too long
 			Thread.sleep(1000);
 		} catch (InterruptedException e) {
 			LOGGER.info("Could not pause training thread.");
@@ -221,7 +250,7 @@ public class TFEvidencePredictionModel {
 
 	private List<Integer> getIndices(float[][] labels, int valueIndix) {
 		List<Integer> indices = new ArrayList<>(labels.length);
-		for (int i=0; i<labels.length; i++) {
+		for (int i = 0; i < labels.length; i++) {
 			if (labels[i][valueIndix] == 1) {
 				indices.add(i);
 			}
@@ -229,11 +258,12 @@ public class TFEvidencePredictionModel {
 		return indices;
 	}
 
-	public void trainModel(int[][] trainData, int[] trainLengths, float[][] trainLabels, PredictionProgressListener listener) {
+	public void trainModel(int[][] trainData, int[] trainLengths, float[][] trainLabels,
+			PredictionProgressListener listener) {
 		EDoHaSettings settings = settingsService.readSettings(getCurrentProject());
 		int numEpochs = settings.getEvidenceDetectionNumEpochs();
 		int batchSize = settings.getEvidenceDetectionBatchSize();
-				
+
 		listener.setTrainingProgress(0);
 
 		for (int i = 0; i < numEpochs; i++) {
@@ -264,14 +294,14 @@ public class TFEvidencePredictionModel {
 				Runner train = session.runner().feed("input", batchInputData).feed("lengths", batchInputLengths)
 						.feed("target", batchInputTarget).addTarget("train");
 				train.run();
-				int progress = (((i*numBatches+batch+1)*100)/(numBatches*numEpochs));
+				int progress = (((i * numBatches + batch + 1) * 100) / (numBatches * numEpochs));
 //				int oben = (i*numBatches+batch+1);
 //				int unten =(numBatches*numEpochs);
 //				int divided = oben/unten;
 
 				// Update progress
 				listener.setTrainingProgress(progress);
-				
+
 			}
 
 			// evaluateModelPerformance(session, testData, testInput, testInputLengths,
@@ -388,8 +418,6 @@ public class TFEvidencePredictionModel {
 		List<SourceDocument> sourceDocuments = documentService.listSourceDocuments(getCurrentProject());
 		return sourceDocuments;
 	}
-
-	
 
 	private static void evaluateModelPerformance(Session session, int[][] data, Tensor<Integer> input,
 			Tensor<Integer> lengths, List<Integer> targets) {

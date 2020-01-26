@@ -15,6 +15,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -156,6 +157,16 @@ public class TFHypothesisEvidenceLinkingModel {
 				int tokenIndex = token2Index.get("UNKNOWN");
 				if (token2Index.containsKey(currentToken)) {
 					tokenIndex = token2Index.get(currentToken);
+				} else if (settingsService.readSettings(project).isFixSpellingEvidence()) {
+					List<String> edits = edits1(currentToken);
+					String replacement = "UNKNOWN";
+					for (String edit : edits) {
+						if (token2Index.containsKey(edit)) {
+							replacement = edit;
+						}
+					}
+					LOGGER.info(String.format("Replacing %s with %s", currentToken, replacement));
+					tokenIndex = token2Index.get(replacement);
 				}
 				int paddedIndex = (maxLength - maxSentenceLength) + j;
 				sentenceArray[paddedIndex] = tokenIndex;
@@ -164,6 +175,22 @@ public class TFHypothesisEvidenceLinkingModel {
 		}
 		return data;
 	}
+
+	/**
+	 * Code from https://github.com/unrelatedlabs/SpellingCorrector-Java8.
+	 * Calculates all single edit changes to the word in question
+	 * @param word to calculate all single edit changes
+	 * @return all single edit permutations
+	 */
+	List<String> edits1(final String word) {
+		Stream<String> deletes = IntStream.range(0, word.length()).mapToObj((i) -> word.substring(0, i) + word.substring(i + 1));
+		Stream<String> replaces = IntStream.range(0, word.length()).mapToObj((i) -> i).flatMap((i) -> "abcdefghijklmnopqrstuvwxyzäöüß".chars().mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i + 1)));
+		Stream<String> inserts = IntStream.range(0, word.length() + 1).mapToObj((i) -> i).flatMap((i) -> "abcdefghijklmnopqrstuvwxyzäöüß".chars().mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i)));
+		Stream<String> transposes = IntStream.range(0, word.length() - 1).mapToObj((i) -> word.substring(0, i) + word.substring(i + 1, i + 2) + word.charAt(i) + word.substring(i + 2));
+		return Stream.of(deletes, replaces, inserts, transposes).flatMap((x) -> x).collect(Collectors.toList());
+	}
+
+	
 
 	// TODO 2018-12-21: Clean up and refactor
 	private List<EvidenceDocument> getDocuments() {

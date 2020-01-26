@@ -38,10 +38,16 @@ public class EDoHaSettings implements Serializable {
 	private boolean learnEvidence;
 
 	@Type(type = "yes_no")
+	private boolean fixSpellingEvidence;
+
+	@Type(type = "yes_no")
 	private boolean suggestLinks;
 
 	@Type(type = "yes_no")
 	private boolean learnLinks;
+
+	@Type(type = "yes_no")
+	private boolean fixSpellingLinks;
 
 	private String evidenceDetectionModelPath;
 	private int evidenceDetectionMaxLength;
@@ -166,17 +172,33 @@ public class EDoHaSettings implements Serializable {
 		this.evidenceLinkingBatchSize = evidenceLinkingBatchSize;
 	}
 
+	public boolean isFixSpellingEvidence() {
+		return fixSpellingEvidence;
+	}
+	
+	public void setFixSpellingEvidence(boolean fixSpellingEvidence) {
+		this.fixSpellingEvidence = fixSpellingEvidence;
+	}
+
+	public boolean isFixSpellingLinks() {
+		return fixSpellingLinks;
+	}
+
+	public void setFixSpellingLinks(boolean fixSpellingLinks) {
+		this.fixSpellingLinks = fixSpellingLinks;
+	}
+
 	@Override
 	public String toString() {
 		return "EDoHaSettings [id=" + id + ", project=" + project + ", suggestEvidence=" + suggestEvidence
-				+ ", learnEvidence=" + learnEvidence + ", suggestLinks=" + suggestLinks + ", learnLinks=" + learnLinks
-				+ ", evidenceDetectionModelPath=" + evidenceDetectionModelPath + ", evidenceDetectionMaxLength="
-				+ evidenceDetectionMaxLength + ", evidenceDetectionNumEpochs=" + evidenceDetectionNumEpochs
-				+ ", evidenceDetectionBatchSize=" + evidenceDetectionBatchSize + ", evidenceLinkingModelPath="
-				+ evidenceLinkingModelPath + ", evidenceLinkingEvidenceMaxLength=" + evidenceLinkingEvidenceMaxLength
-				+ ", evidenceLinkingHypothesisMaxLength=" + evidenceLinkingHypothesisMaxLength
-				+ ", evidenceLinkingNumEpochs=" + evidenceLinkingNumEpochs + ", evidenceLinkingBatchSize="
-				+ evidenceLinkingBatchSize + "]";
+				+ ", learnEvidence=" + learnEvidence + ", fixSpellingEvidence=" + fixSpellingEvidence
+				+ ", suggestLinks=" + suggestLinks + ", learnLinks=" + learnLinks + ", fixSpellingLinks="
+				+ fixSpellingLinks + ", evidenceDetectionModelPath=" + evidenceDetectionModelPath
+				+ ", evidenceDetectionMaxLength=" + evidenceDetectionMaxLength + ", evidenceDetectionNumEpochs="
+				+ evidenceDetectionNumEpochs + ", evidenceDetectionBatchSize=" + evidenceDetectionBatchSize
+				+ ", evidenceLinkingModelPath=" + evidenceLinkingModelPath + ", evidenceLinkingEvidenceMaxLength="
+				+ evidenceLinkingEvidenceMaxLength + ", evidenceLinkingHypothesisMaxLength="
+				+ evidenceLinkingHypothesisMaxLength + ", evidenceLinkingNumEpochs=" + evidenceLinkingNumEpochs
+				+ ", evidenceLinkingBatchSize=" + evidenceLinkingBatchSize + "]";
 	}
-
 }
