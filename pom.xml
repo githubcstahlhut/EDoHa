@@ -9,7 +9,7 @@
 
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.tudarmstadt.informatik.ukp</groupId>
-	<artifactId>argument-similarity</artifactId>
+	<artifactId>EDoHa</artifactId>
 	<version>0.0.3-SNAPSHOT</version>
 	<packaging>war</packaging>
 
@@ -372,7 +372,7 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-			
+
 			<dependency>
 				<!-- Import dependency management from Spring Boot -->
 				<groupId>de.tudarmstadt.ukp.clarin.webanno</groupId>
@@ -384,11 +384,11 @@
 
 			<!-- Reader -->
 
-<!-- 			<dependency> -->
-<!-- 				<groupId>de.tudarmstadt.ukp.webanno</groupId> -->
-<!-- 				<artifactId>webanno-userlogging</artifactId> -->
-<!-- 				<version>${userlogging.version}</version> -->
-<!-- 			</dependency> -->
+			<!-- <dependency> -->
+			<!-- <groupId>de.tudarmstadt.ukp.webanno</groupId> -->
+			<!-- <artifactId>webanno-userlogging</artifactId> -->
+			<!-- <version>${userlogging.version}</version> -->
+			<!-- </dependency> -->
 			<dependency>
 				<groupId>org.deeplearning4j</groupId>
 				<artifactId>deeplearning4j-core</artifactId>
@@ -409,11 +409,11 @@
 				<artifactId>nd4j-native-platform</artifactId>
 				<version>${dl4j.version}</version>
 			</dependency>
-			
+
 			<dependency>
-			  <groupId>org.tensorflow</groupId>
-			  <artifactId>libtensorflow</artifactId>
-			  <version>${tf.version}</version>
+				<groupId>org.tensorflow</groupId>
+				<artifactId>libtensorflow</artifactId>
+				<version>${tf.version}</version>
 			</dependency>
 
 			<dependency>
@@ -422,7 +422,6 @@
 				<version>${tf.version}</version>
 			</dependency>
 		</dependencies>
-
 	</dependencyManagement>
 
 	<dependencies>
@@ -479,10 +478,10 @@
 			<groupId>de.tudarmstadt.ukp.dkpro.core</groupId>
 			<artifactId>de.tudarmstadt.ukp.dkpro.core.io.text-asl</artifactId>
 		</dependency>
-<!-- 		<dependency> -->
-<!-- 			<groupId>de.tudarmstadt.ukp.webanno</groupId> -->
-<!-- 			<artifactId>webanno-userlogging</artifactId> -->
-<!-- 		</dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>de.tudarmstadt.ukp.webanno</groupId> -->
+		<!-- <artifactId>webanno-userlogging</artifactId> -->
+		<!-- </dependency> -->
 
 
 		<!-- WICKET DEPENDENCIES -->
@@ -638,7 +637,7 @@
 			<groupId>com.giffing.wicket.spring.boot.starter</groupId>
 			<artifactId>wicket-spring-boot-starter</artifactId>
 		</dependency>
-		<!--  DL4J  -->
+		<!-- DL4J -->
 		<dependency>
 			<groupId>org.deeplearning4j</groupId>
 			<artifactId>deeplearning4j-core</artifactId>
@@ -651,26 +650,25 @@
 			<groupId>org.nd4j</groupId>
 			<artifactId>nd4j-native-platform</artifactId>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>de.tudarmstadt.ukp.inception.app</groupId>
 			<artifactId>inception-log</artifactId>
 		</dependency>
-<!-- 		<dependency> -->
-<!-- 			<groupId>de.tudarmstadt.ukp.inception.app</groupId> -->
-<!-- 			<artifactId>inception-recommendation</artifactId> -->
-<!-- 		</dependency> -->
+		<!-- <dependency> -->
+		<!-- <groupId>de.tudarmstadt.ukp.inception.app</groupId> -->
+		<!-- <artifactId>inception-recommendation</artifactId> -->
+		<!-- </dependency> -->
 
 		<dependency>
-		  <groupId>org.tensorflow</groupId>
-		  <artifactId>libtensorflow</artifactId>
+			<groupId>org.tensorflow</groupId>
+			<artifactId>libtensorflow</artifactId>
 		</dependency>
 
 		<dependency>
 			<groupId>org.tensorflow</groupId>
 			<artifactId>libtensorflow_jni</artifactId>
 		</dependency>
-		
 	</dependencies>
 
 	<build>
