@@ -35,6 +35,7 @@ import de.tudarmstadt.ukp.edoha.arggroup.model.ArgumentGroup;
 import de.tudarmstadt.ukp.edoha.arggroup.model.EDoHaSettings;
 import de.tudarmstadt.ukp.edoha.arggroup.model.Evidence;
 import de.tudarmstadt.ukp.edoha.arggroup.model.EvidenceDocument;
+import de.tudarmstadt.ukp.edoha.arggroup.services.DocumentTileService;
 import de.tudarmstadt.ukp.edoha.arggroup.services.EvidenceDocumentService;
 import de.tudarmstadt.ukp.edoha.arggroup.services.GroupService;
 import de.tudarmstadt.ukp.edoha.arggroup.services.SettingsService;
@@ -45,6 +46,7 @@ public class TFHypothesisEvidenceLinkingModel {
 
 	private GroupService groupService;
 	private EvidenceDocumentService evidenceDocumentService;
+	private DocumentTileService documentTileService;
 	private DocumentService documentService;
 
 	private final String modelPath;
@@ -55,22 +57,32 @@ public class TFHypothesisEvidenceLinkingModel {
 
 	private SettingsService settingsService;
 
-	public TFHypothesisEvidenceLinkingModel(String modelPath, GroupService groupService, EvidenceDocumentService evidenceDocumentService2,
-			DocumentService documentService2, SettingsService settingsService, Project project, User user) throws IOException {
+	public TFHypothesisEvidenceLinkingModel(String modelPath, GroupService groupService,
+			EvidenceDocumentService evidenceDocumentService2, DocumentService documentService2,
+			DocumentTileService documentTileService2, SettingsService settingsService, Project project, User user)
+			throws IOException {
 		this.groupService = groupService;
 		this.evidenceDocumentService = evidenceDocumentService2;
 		this.documentService = documentService2;
+		this.documentTileService = documentTileService2;
 		this.settingsService = settingsService;
 		this.project = project;
 		this.user = user;
-		this.modelPath = modelPath+"/"+this.project.getName();
-		
-		SavedModelBundle bundle = SavedModelBundle.load(String.format("%s/%s", this.modelPath, "hypothesisevidencelinking"),
-				"serve");
+		this.modelPath = modelPath + "/" + this.project.getName();
+
+		SavedModelBundle bundle = SavedModelBundle
+				.load(String.format("%s/%s", this.modelPath, "hypothesisevidencelinking"), "serve");
 		session = bundle.session();
 		token2Index = readVocabulary();
 	}
 
+	/**
+	 * Returns the evidence that this model would link to the given hypothesis.
+	 * If the user has a document open, than the evidence can only come from this document, otherwise the evidence can come from all documents.
+	 * @param hypothesis to search for evidence
+	 * @param threshold to filter out evidence where the model is not confidence enough
+	 * @return all pieces of evidence that this model is confident enough are linked to the hypothesis
+	 */
 	public List<Evidence> getEvidence(String hypothesis, double threshold) {
 
 		LOGGER.debug("hypothesis = " + hypothesis);
@@ -79,7 +91,13 @@ public class TFHypothesisEvidenceLinkingModel {
 			return new LinkedList<>();
 		}
 
-		List<Evidence> evidences = getAllEvidence();
+		EvidenceDocument evidenceDocument = documentTileService.getEditedDocument();
+		final List<Evidence> evidences;
+		if (evidenceDocument != null) {
+			 evidences = evidenceDocument.getEvidences();
+		} else { // not document selected
+			evidences = getAllEvidence();
+		}
 
 		List<Evidence> results = new LinkedList<>();
 		if (!evidences.isEmpty()) {
@@ -179,18 +197,23 @@ public class TFHypothesisEvidenceLinkingModel {
 	/**
 	 * Code from https://github.com/unrelatedlabs/SpellingCorrector-Java8.
 	 * Calculates all single edit changes to the word in question
+	 * 
 	 * @param word to calculate all single edit changes
 	 * @return all single edit permutations
 	 */
 	List<String> edits1(final String word) {
-		Stream<String> deletes = IntStream.range(0, word.length()).mapToObj((i) -> word.substring(0, i) + word.substring(i + 1));
-		Stream<String> replaces = IntStream.range(0, word.length()).mapToObj((i) -> i).flatMap((i) -> "abcdefghijklmnopqrstuvwxyzäöüß".chars().mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i + 1)));
-		Stream<String> inserts = IntStream.range(0, word.length() + 1).mapToObj((i) -> i).flatMap((i) -> "abcdefghijklmnopqrstuvwxyzäöüß".chars().mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i)));
-		Stream<String> transposes = IntStream.range(0, word.length() - 1).mapToObj((i) -> word.substring(0, i) + word.substring(i + 1, i + 2) + word.charAt(i) + word.substring(i + 2));
+		Stream<String> deletes = IntStream.range(0, word.length())
+				.mapToObj((i) -> word.substring(0, i) + word.substring(i + 1));
+		Stream<String> replaces = IntStream.range(0, word.length()).mapToObj((i) -> i)
+				.flatMap((i) -> "abcdefghijklmnopqrstuvwxyzäöüß".chars()
+						.mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i + 1)));
+		Stream<String> inserts = IntStream.range(0, word.length() + 1).mapToObj((i) -> i)
+				.flatMap((i) -> "abcdefghijklmnopqrstuvwxyzäöüß".chars()
+						.mapToObj((c) -> word.substring(0, i) + (char) c + word.substring(i)));
+		Stream<String> transposes = IntStream.range(0, word.length() - 1).mapToObj(
+				(i) -> word.substring(0, i) + word.substring(i + 1, i + 2) + word.charAt(i) + word.substring(i + 2));
 		return Stream.of(deletes, replaces, inserts, transposes).flatMap((x) -> x).collect(Collectors.toList());
 	}
-
-	
 
 	// TODO 2018-12-21: Clean up and refactor
 	private List<EvidenceDocument> getDocuments() {
@@ -205,8 +228,8 @@ public class TFHypothesisEvidenceLinkingModel {
 		return evidenceDocuments;
 	}
 
-
-	public void trainModel(List<ArgumentGroup> groupList, String username, PredictionProgressListener listener, Project project) {
+	public void trainModel(List<ArgumentGroup> groupList, String username, PredictionProgressListener listener,
+			Project project) {
 
 		// evaluateModelPerformance(session);
 		// evaluate Model before and after training to see, if training did change
@@ -242,7 +265,7 @@ public class TFHypothesisEvidenceLinkingModel {
 						.feed("sentence_length", batchInput.evidencesLengths).feed("target", batchInput.labels)
 						.addTarget("train");
 				train.run();
-				int progress = (((i*numBatches+batch+1)*100)/(numBatches*numEpochs));
+				int progress = (((i * numBatches + batch + 1) * 100) / (numBatches * numEpochs));
 				listener.setTrainingProgress(progress);
 			}
 			// evaluateModelPerformance(session);
@@ -425,8 +448,8 @@ public class TFHypothesisEvidenceLinkingModel {
 	private static List<DataRecord> readData(String set) throws IOException {
 		CSVFormat format = CSVFormat.DEFAULT.withFirstRecordAsHeader().withQuote('\'');
 		; // .withHeader("topic", "retrievedUrl",
-		// "archivedUrl", "sentenceHash", "sentence",
-		// "annotation", "set")
+			// "archivedUrl", "sentenceHash", "sentence",
+			// "annotation", "set")
 		CSVParser parser = CSVParser.parse(
 				new File("src/main/not-included-resources/models/IBMDebaterEvidenceSentences/test.csv.linking"),
 				StandardCharsets.UTF_8, format);
@@ -529,7 +552,7 @@ public class TFHypothesisEvidenceLinkingModel {
 			EDoHaSettings settings = settingsService.readSettings(project);
 			int hypothesisMaxLength = settings.getEvidenceLinkingHypothesisMaxLength();
 			int evidenceMaxLength = settings.getEvidenceLinkingEvidenceMaxLength();
-			
+
 			int[][] hypothesesArray = convertToArray(hypotheses, hypothesisMaxLength);
 			int[][] evidencesArray = convertToArray(evidences, evidenceMaxLength);
 			float[][] labelArray = labels.toArray(new float[labels.size()][2]);

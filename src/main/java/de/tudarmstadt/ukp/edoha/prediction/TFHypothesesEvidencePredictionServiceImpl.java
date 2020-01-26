@@ -21,6 +21,7 @@ import de.tudarmstadt.ukp.clarin.webanno.security.model.User;
 import de.tudarmstadt.ukp.edoha.arggroup.ProjectUtil;
 import de.tudarmstadt.ukp.edoha.arggroup.model.ArgumentGroup;
 import de.tudarmstadt.ukp.edoha.arggroup.model.Evidence;
+import de.tudarmstadt.ukp.edoha.arggroup.services.DocumentTileService;
 import de.tudarmstadt.ukp.edoha.arggroup.services.EvidenceDocumentService;
 import de.tudarmstadt.ukp.edoha.arggroup.services.GroupService;
 import de.tudarmstadt.ukp.edoha.arggroup.services.SettingsService;
@@ -37,6 +38,7 @@ public class TFHypothesesEvidencePredictionServiceImpl implements HypothesisEvid
 	private @Resource UserDao userService;
 	private @Resource EvidenceDocumentService evidenceDocumentService;
 	private @Resource DocumentService documentService;
+	private @Resource DocumentTileService documentTileService;
 	private @Resource SettingsService settingsService;
     private @Resource AsyncTaskExecutor taskExecutor;	
 	
@@ -83,7 +85,7 @@ public class TFHypothesesEvidencePredictionServiceImpl implements HypothesisEvid
 		} else {
 			try {
 				User user = this.user;
-				userModel = new TFHypothesisEvidenceLinkingModel(modelPath, groupService, evidenceDocumentService, documentService, settingsService, getCurrentProject(), user);
+				userModel = new TFHypothesisEvidenceLinkingModel(modelPath, groupService, evidenceDocumentService, documentService, documentTileService, settingsService, getCurrentProject(), user);
 				models.put(userName, userModel);
 			} catch (IOException e) {
 				LOGGER.error(e.getMessage(), e);
