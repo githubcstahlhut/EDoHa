@@ -6,12 +6,12 @@ function highlight() {
 				console.log("mouse enter: " + event.target + " with id: "
 						+ evidenceId);
 				$(document).bind("keydown", function(e) {
-					if (18 == e.keyCode) { // Alt key
+					if (17 == e.keyCode) { // Ctrl key
 						add_css_class(evidenceId);
 					}
 				});
 				$(document).bind("keyup", function(e) {
-					if (18 == e.keyCode) { // Alt key
+					if (17 == e.keyCode) { // Ctrl key
 						remove_css_class(evidenceId);
 					}
 				});
