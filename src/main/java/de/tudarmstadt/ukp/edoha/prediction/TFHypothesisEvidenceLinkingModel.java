@@ -77,11 +77,15 @@ public class TFHypothesisEvidenceLinkingModel {
 	}
 
 	/**
-	 * Returns the evidence that this model would link to the given hypothesis.
-	 * If the user has a document open, than the evidence can only come from this document, otherwise the evidence can come from all documents.
+	 * Returns the evidence that this model would link to the given hypothesis. If
+	 * the user has a document open, than the evidence can only come from this
+	 * document, otherwise the evidence can come from all documents.
+	 * 
 	 * @param hypothesis to search for evidence
-	 * @param threshold to filter out evidence where the model is not confidence enough
-	 * @return all pieces of evidence that this model is confident enough are linked to the hypothesis
+	 * @param threshold  to filter out evidence where the model is not confidence
+	 *                   enough
+	 * @return all pieces of evidence that this model is confident enough are linked
+	 *         to the hypothesis
 	 */
 	public List<Evidence> getEvidence(String hypothesis, double threshold) {
 
@@ -94,7 +98,7 @@ public class TFHypothesisEvidenceLinkingModel {
 		EvidenceDocument evidenceDocument = documentTileService.getEditedDocument();
 		final List<Evidence> evidences;
 		if (evidenceDocument != null) {
-			 evidences = evidenceDocument.getEvidences();
+			evidences = evidenceDocument.getEvidences();
 		} else { // not document selected
 			evidences = getAllEvidence();
 		}
@@ -288,16 +292,22 @@ public class TFHypothesisEvidenceLinkingModel {
 
 		RawTrainData stronglyNegTrainData = getStronglyNegativeTrainData(new float[] { 1, 0 });
 
-		int numberOfNegativeTrainData = posTrainData.evidences.size() - stronglyNegTrainData.evidences.size();
+		int additionalTrainingData = stronglyNegTrainData.evidences.size() - posTrainData.evidences.size();
 
-		RawTrainData stronglyTrainData = stronglyNegTrainData.concatenate(posTrainData);
+		RawTrainData allTrainData = stronglyNegTrainData.concatenate(posTrainData);
 
-		// create weakly labeled training-data
-		RawTrainData weaklyNegTrainData = getWeaklyNegativeTrainData(posTrainData.hypotheses, posTrainData.evidences,
-				numberOfNegativeTrainData);
+		if (additionalTrainingData > 0) { // Create more positive links
 
-		// combine strongly and weakly labeled data
-		RawTrainData allTrainData = stronglyTrainData.concatenate(weaklyNegTrainData);
+			RawTrainData upsamples = posTrainData.getRandomSamples(additionalTrainingData);
+			allTrainData = allTrainData.concatenate(upsamples);
+
+		} else if (additionalTrainingData < 0) { // create weakly labeled non-links
+
+			RawTrainData weaklyNegTrainData = getWeaklyNegativeTrainData(posTrainData.hypotheses,
+					posTrainData.evidences, -additionalTrainingData);
+
+			allTrainData = allTrainData.concatenate(weaklyNegTrainData);
+		}
 
 		return allTrainData.toTrainData();
 	}
@@ -542,6 +552,10 @@ public class TFHypothesisEvidenceLinkingModel {
 		private List<float[]> labels;
 
 		public RawTrainData(List<String> hypotheses, List<String> evidences, List<float[]> label) {
+
+			assert hypotheses.size() == evidences.size();
+			assert hypotheses.size() == label.size();
+
 			this.hypotheses = hypotheses;
 			this.evidences = evidences;
 			this.labels = label;
@@ -563,6 +577,23 @@ public class TFHypothesisEvidenceLinkingModel {
 			return new Dataset(hypothesesArray, evidencesArray, labelArray, evidencesLengths, hypothesesLengths);
 		}
 
+		public RawTrainData getRandomSamples(int additionalTrainingData) {
+			Random seed = new Random(0);
+			List<Integer> sampleIdx = seed.ints(additionalTrainingData).boxed().collect(Collectors.toList());
+
+			List<String> sampledHypotheses = new ArrayList<>(additionalTrainingData);
+			List<String> sampledEvidences = new ArrayList<>(additionalTrainingData);
+			List<float[]> sampledLabels = new ArrayList<>(additionalTrainingData);
+
+			for (int index : sampleIdx) {
+				sampledHypotheses.add(hypotheses.get(index));
+				sampledEvidences.add(evidences.get(index));
+				sampledLabels.add(labels.get(index));
+			}
+
+			return new RawTrainData(sampledHypotheses, sampledEvidences, sampledLabels);
+		}
+
 		private void shuffle() {
 			// use list of shuffled indices to keep order identical between lists
 			Random seed = new Random(0);
@@ -573,13 +604,10 @@ public class TFHypothesisEvidenceLinkingModel {
 			List<String> shuffledEvidences = new ArrayList<String>(evidences.size());
 			List<float[]> shuffledLabels = new ArrayList<float[]>(labels.size());
 
-			for (int i = 0; i < hypotheses.size(); i++) {
-				int index = randomList.get(i);
+			for (int index : randomList) {
 				shuffledHypotheses.add(hypotheses.get(index));
 				shuffledEvidences.add(evidences.get(index));
-				if (i < labels.size()) {
-					shuffledLabels.add(labels.get(index));
-				}
+				shuffledLabels.add(labels.get(index));
 			}
 			hypotheses = shuffledHypotheses;
 			evidences = shuffledEvidences;
@@ -592,6 +620,5 @@ public class TFHypothesisEvidenceLinkingModel {
 			labels.addAll(toConcat.labels);
 			return this;
 		}
-
 	}
 }
